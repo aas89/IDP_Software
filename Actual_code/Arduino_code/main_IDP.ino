@@ -10,8 +10,8 @@ Adafruit_DCMotor *myMotor1 = AFMS.getMotor(1);
 // You can also make another motor on port M2
 Adafruit_DCMotor *myMotor2 = AFMS.getMotor(2);
 // Set up scoop motors
-//Adafruit_DCMotor *pullMotor = AFMS.getMotor(3);
-//Adafruit_DCMotor *ejectMotor = AFMS.getMotor(4);
+Adafruit_DCMotor *pullMotor = AFMS.getMotor(3);
+Adafruit_DCMotor *ejectMotor = AFMS.getMotor(4);
 
 auto timer = timer_create_default(); // create a timer with default settings
 int timer_count = 0;
@@ -70,7 +70,7 @@ void loop() {
 // while ((people_collected<4) && (millis()<240000)) {
 // locate_victim_side;
 // sweep_towards_person(); // maybe don't need this??
-// GO PICK THEM UP // needs to increment people_collected within it
+// pick_up_victim() // needs to increment people_collected within it
 // back_to_centre();
 //
 //}
@@ -413,6 +413,9 @@ void locate_victim_side() {
         } else {
           Serial.println("Side variable not working properly");
         }
+        pullMotor -> run(BACKWARD);
+        pullMotor -> setSpeed(50); 
+        delay(1000); // ADAPT SO OPENS ABOUT 90 DEGREES
         
     }
       }
@@ -502,6 +505,38 @@ void move_along_center(int offCentreThresh, int totalDist) {
   Serial.println("Count exceeded so follow line has stopped");
 }
 
+////////////// SCOOP FUNCTIONS
+
+///// PICK UP PEOPLE
+void pick_up_victim(){
+//  GO TOWARDS PERSON AND STOP WITHIN 5CM
+  delay(5000); // WAIT FOR VICTIM IDENTIFICATION CIRCUIT TO WORK
+  forward(50); // CHANGE SPEED TO LOWEST POSSIBLE THAT STILL MOVES
+  pullMotor -> run(BACKWARD);
+  pullMotor -> setSpeed(60);
+  delay(1000); // CHANGE SO STOPS WHEN CLOSED
+  people_collected += 1;
+  }
+
+void drop_off_victims () {
+  rightturn();
+  backward(80);
+  delay(500);
+  pullMotor -> run(FORWARD);
+  pullMotor -> setSpeed(60);
+  delay(1000);
+  ejectMotor -> run(FORWARD);
+  ejectMotor -> setSpeed(40);
+  delay(2000); // OPEN MORE THAN 90 DEGREES?
+  ejectMotor -> run(BACKWARD);
+  ejectMotor -> setSpeed(50);
+  delay(2000);
+  pullMotor -> run(BACKWARD);
+  pullMotor -> setSpeed(60);
+  delay(1000);
+  rightturn();
+  
+}
 
 //////////////////////////////////////////////////////////////////////// SEQUENCES:
 

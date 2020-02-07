@@ -1,3 +1,6 @@
+///////// NEED TO ADD FLASHING AMBER LIGHT WHEN MOVING AND THEN LIT FOR 1 SEC WHEN STOPPED IN FRONT OF VICTIM
+
+
 #include <Wire.h>
 #include <Adafruit_MotorShield.h>
 #include <timer.h>
@@ -59,49 +62,58 @@ void loop() {
 //////////////////////////// LINE FOLLOWING INTO CAVE:
 
 //// START SEQUENCE (includes automatic calibration):
-//  start_sequence();
-//  delayprint(1000);
+  start_sequence();
+  delayprint(1000);
 
-//////// FIND LINE rotating:
-//  rotate_find_line(leftThreshLineFollow, rightThreshLineFollow);
-//  delayprint(1000);
+////// FIND LINE rotating:
+  rotate_find_line(leftThreshLineFollow, rightThreshLineFollow);
+  delayprint(1000);
 
-//////// FOLLOW LINE:
-//  follow_line_new (leftThreshLineFollow, rightThreshLineFollow, extraThreshLineFollow);
+////// FOLLOW LINE:
+  follow_line_new (leftThreshLineFollow, rightThreshLineFollow, extraThreshLineFollow);
 
 //////////////////////////////// FINDING VICTIMS INSIDE CAVE:
 ///// CHECK IN FRONT FOR VICTIMS
-    bool person_found = sweep_towards_person(); // returns bool of whether person has been found
-    if (person_found == true) {
-      Serial.println("picking up victim (after delay) ....");
-      delayprint(3000);
-      pick_up_victim();
-    }
-    Serial.println("Reversing to end (after delay) ....");
-    delayprint(3000);
-    reverse_to_end();
+//    bool person_found = sweep_towards_person(); // returns bool of whether person has been found
+//    if (person_found == true) {
+//      Serial.println("picking up victim (after delay) ....");
+//      delayprint(3000);
+//      pick_up_victim();
+//    }
+//    Serial.println("Reversing to end (after delay) ....");
+//    delayprint(3000);
+//    reverse_to_end();
 
 ////// FIND SIDE VICTIMS
 //   while ((people_collected<4) && (millis()<240000)) { // <---------------------------------------------- check this millis() variable is actually getting updated / working
-//     locate_victim_side;
+//        locate_victim_side();
+//        pullMotor -> run(BACKWARD);
+//        pullMotor -> setSpeed(200); 
+//        delay(3000); // ADAPT SO OPENS ABOUT 90 DEGREES
+//        pullMotor -> setSpeed(0);
 //     bool person_found = sweep_towards_person(); // maybe don't need this??
 //     if (person_found) {
 //          pick_up_victim();  // needs to increment people_collected within it
 //        }
 //     back_to_centre();
+//     int ultrasonic2reading = ultrasonic2.read();
+//     if (ultrasonic2reading > 100) {
+//      rightturn();
+//      rightturn();
+//       }
 //  }
 
 //////////////////////////// DROP OFF + BACK TO START
 //  find_line_on_way_back(leftThreshLineFollow, rightThreshLineFollow, extraThreshLineFollow);
 //  delayprint(1000);
   
-//  rotate_find_line(leftThreshLineFollow, rightThreshLineFollow);
+//  rotate_find_line(leftThreshLineFollow, firightThreshLineFollow);
 //  delayprint(1000);
 //  follow_line_new (leftThreshLineFollow, rightThreshLineFollow, extraThreshLineFollow);
-  
+//  
 //  drop_off_victims();
 //  reverse_to_start(leftThreshLineFollow, rightThreshLineFollow, extraThreshLineFollow);
-
+//
 //  Serial.println(" --------------- END ----------------");
 //  delayprint(20000);
 
@@ -256,9 +268,7 @@ void rotate_find_line (int leftThresh, int rightThresh) {
 
 /// LOCATE VICTIM USING SIDE SENSORS AND TURN TO FACE IT
 void locate_victim_side() {
-  int distSenslPin = A4; // select correct input pin
-  int distSensrPin = A3;
-  int distSensPin;
+  int distSensPin = A3;
   int distSens = 0;
   int newDistSens = 0;
   int i = 0;
@@ -272,11 +282,6 @@ void locate_victim_side() {
   bool finished = false;
   int thresh = 100; // Adjust based on reading for wall
   int currentTime = 0;
-  if (side == "left") {
-    distSensPin = distSenslPin;
-  } else {
-    distSensPin = distSensrPin;
-  }
   Serial.println(thresh);
   forward(80);
 
@@ -329,16 +334,8 @@ void locate_victim_side() {
         delay(250);
         halt();
         delay(500);
-        if (side == "left") {
-          leftturn();
-        } else if (side == "right") {
-          rightturn();
-        } else {
-          Serial.println("Side variable not working properly");
-        }
-        pullMotor -> run(BACKWARD);
-        pullMotor -> setSpeed(50); 
-        delay(1000); // ADAPT SO OPENS ABOUT 90 DEGREES
+        rightturn();
+
         
     }
       }
@@ -407,7 +404,7 @@ bool sweep_towards_person() {
         close_ultrasound = 0;
       }
       if (close_counter >= 6) {
-        delay(800);
+        delay(950);
         halt();
         Serial.print("Person Located, distance to person (in cm?) = ");
         Serial.println(current_ultrasound);
@@ -662,7 +659,7 @@ void reverse_to_end() {
 
 void back_to_centre() {
   bool go_to_center = true;
-  
+  backward(70);
   while (go_to_center) {
     int ultrasound_reading1 = ultrasonic1.read();
     int ultrasound_reading2 = ultrasonic2.read();
@@ -894,7 +891,7 @@ void rightturn() {
   myMotor2->run(BACKWARD);
   myMotor1->setSpeed(165);
   myMotor2->setSpeed(165);
-  delay(1800);
+  delay(1200);
   myMotor1->setSpeed(0);
   myMotor2->setSpeed(0);
 }

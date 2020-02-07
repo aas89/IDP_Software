@@ -51,7 +51,7 @@ void loop() {
 
 //////// INITIAL TEST OF SENSORS:
 //  read_line_sensors();
-  read_ultrasound_sensors();
+//  read_ultrasound_sensors();
 //  delay(1000);
 
 //////////////////////////// NAVIGATION:
@@ -72,10 +72,13 @@ void loop() {
 //////////////////////////////// FINDING VICTIMS INSIDE CAVE:
 ///// CHECK IN FRONT FOR VICTIMS
     bool person_found = sweep_towards_person(); // returns bool of whether person has been found
-    if (person_found) {
+    if (person_found == true) {
+      Serial.println("picking up victim (after delay) ....");
       delayprint(3000);
       pick_up_victim();
     }
+    Serial.println("Reversing to end (after delay) ....");
+    delayprint(3000);
     reverse_to_end();
 
 ////// FIND SIDE VICTIMS
@@ -367,7 +370,7 @@ void locate_victim_side() {
 bool sweep_towards_person() {
   bool person_found = false;
   time_counter_a = 0;
-  variableleftturnangle(500);
+  variableleftturnangle(400);
   delayprint(1000);
   int sweep_direction_count = 0;
   while ((sweep_direction_count < 10) and (person_found == false)) {
@@ -387,13 +390,14 @@ bool sweep_towards_person() {
     int sweep_start_timer = time_counter_a;
     int current_ultrasound = ultrasonic1.read();
     int previous_ultrasound = ultrasonic1.read();
+    int pre_prev_ultrasound = ultrasonic1.read();
     int close_ultrasound = 0;
     int close_counter = 0;
-    while (time_counter_a < sweep_start_timer + 40) {
+    while (time_counter_a < sweep_start_timer + 50) {
       timer_a.tick(); // tick the timer
       current_ultrasound = ultrasonic1.read();
       Serial.println(current_ultrasound);
-      if ((previous_ultrasound-current_ultrasound) >= 20) {
+      if ((((previous_ultrasound-current_ultrasound) >= 20)) and ((pre_prev_ultrasound-current_ultrasound) >= 20)) {
         close_ultrasound = current_ultrasound;
         close_counter = 1;
       } else if ((abs(current_ultrasound-close_ultrasound) <= 5) and (close_ultrasound != 0)) {
@@ -402,19 +406,21 @@ bool sweep_towards_person() {
         close_counter = 0;
         close_ultrasound = 0;
       }
-      if (close_counter >= 5) {
+      if (close_counter >= 6) {
+        delay(800);
         halt();
         Serial.print("Person Located, distance to person (in cm?) = ");
         Serial.println(current_ultrasound);
         Serial.print("Collecting person...");
         delayprint(2000);
         forward(100);
-        delayprint(current_ultrasound * 10);  /// <---------------------- CHANGE DISTANCE CALIBRATION FACTOR HERE
+        delayprint(current_ultrasound * 50);  /// <---------------------- CHANGE DISTANCE CALIBRATION FACTOR HERE
         halt();
         person_found = true;
         return true;
         break;
       }
+      pre_prev_ultrasound = previous_ultrasound;
       previous_ultrasound = current_ultrasound;
     }
     halt();
@@ -426,218 +432,218 @@ bool sweep_towards_person() {
 }
 
 
-bool sweep_towards_person1() {
-  int start_overall_sweep = time_counter_a;
-  variableleftturnangle(500);
-  delayprint(1000);
-  int sweep_direction_count = 0;
-  int sweep = false;
-  bool sweep1 = false;
-  bool sweep2 = false;
-  bool person_found = false;
-  while (time_counter_a < (start_overall_sweep + 30*6)) {
-    //// start sweep:
-    if (sweep_direction_count == 0) {
-      rightturnspeedset(50);
-      sweep_direction_count = 1;
-    } else if (sweep_direction_count == 1) {
-      leftturnspeedset(50);
-      sweep_direction_count = 0;
-    } else {
-      Serial.println("error with sweep_direction_count");
-    }
-    
-    if ((sweep1 == true) and (sweep2 == true)) {
-      Serial.println("BOTH SWEEPS ARE TRUE ----> PERSON DETECTED");
-      delayprint(3000);
-      int ultrasound_distance = sweep_locating();
-      Serial.println("POINTING IN CORRECT DIRECTION??? going to go collect person after delay");
-      Serial.print("ultrasound_distance = ");
-      Serial.print(ultrasound_distance);
-      delayprint(3000);
-      forward(100);
-      delayprint(ultrasound_distance * 100);  /// <---------------------- CHANGE DISTANCE CALIBRATION FACTOR HERE
-      halt();
-      person_found = true;
-      break;
-      Serial.println("Should I sweep a second time of should I just collect the person?");
-      delayprint(6000);
-      /// function to go towards victim and check distance is decreasing
-    } else if ((sweep1 == true) and (sweep2 == false)) {
-      Serial.println("SECOND SWEEP i.e. double checking");
+//bool sweep_towards_person1() {
+//  int start_overall_sweep = time_counter_a;
+//  variableleftturnangle(500);
+//  delayprint(1000);
+//  int sweep_direction_count = 0;
+//  int sweep = false;
+//  bool sweep1 = false;
+//  bool sweep2 = false;
+//  bool person_found = false;
+//  while (time_counter_a < (start_overall_sweep + 30*6)) {
+//    //// start sweep:
+//    if (sweep_direction_count == 0) {
+//      rightturnspeedset(50);
+//      sweep_direction_count = 1;
+//    } else if (sweep_direction_count == 1) {
+//      leftturnspeedset(50);
+//      sweep_direction_count = 0;
+//    } else {
+//      Serial.println("error with sweep_direction_count");
+//    }
+//    
+//    if ((sweep1 == true) and (sweep2 == true)) {
+//      Serial.println("BOTH SWEEPS ARE TRUE ----> PERSON DETECTED");
 //      delayprint(3000);
-      sweep = checking_sweep();
-      sweep1 = sweep;
-      sweep2 = sweep;      
-    } else if ((sweep1 == false) and (sweep2 == false)) {
-      Serial.println("FIRST SWEEP i.e. looking for person");
-      sweep = checking_sweep();
-      sweep1 = sweep;
-      sweep2 = false;
-    } else {
-      Serial.println("reached else that should not get to so somehow (sweep1 == false and sweep2 == true)");
-    }
-  }
-  return person_found;
-}
-
-
-bool checking_sweep() {
-  int initial_ultrasound = ultrasonic1.read();
-  Serial.print("initial_ultrasound = ");
-  Serial.println(initial_ultrasound);
-  int ultrasound_reading;
-  int middle_ultrasound;
-  int first_far = true;
-  int middle_close = false;
-  int second_far = false;
-  int sweep_success = false;
-  int sweep_start_timer = time_counter_a;
+//      int ultrasound_distance = sweep_locating();
+//      Serial.println("POINTING IN CORRECT DIRECTION??? going to go collect person after delay");
+//      Serial.print("ultrasound_distance = ");
+//      Serial.print(ultrasound_distance);
+//      delayprint(3000);
+//      forward(100);
+//      delayprint(ultrasound_distance * 100);  /// <---------------------- CHANGE DISTANCE CALIBRATION FACTOR HERE
+//      halt();
+//      person_found = true;
+//      break;
+//      Serial.println("Should I sweep a second time of should I just collect the person?");
+//      delayprint(6000);
+//      /// function to go towards victim and check distance is decreasing
+//    } else if ((sweep1 == true) and (sweep2 == false)) {
+//      Serial.println("SECOND SWEEP i.e. double checking");
+////      delayprint(3000);
+//      sweep = checking_sweep();
+//      sweep1 = sweep;
+//      sweep2 = sweep;      
+//    } else if ((sweep1 == false) and (sweep2 == false)) {
+//      Serial.println("FIRST SWEEP i.e. looking for person");
+//      sweep = checking_sweep();
+//      sweep1 = sweep;
+//      sweep2 = false;
+//    } else {
+//      Serial.println("reached else that should not get to so somehow (sweep1 == false and sweep2 == true)");
+//    }
+//  }
+//  return person_found;
+//}
+//
+//
+//bool checking_sweep() {
+//  int initial_ultrasound = ultrasonic1.read();
+//  Serial.print("initial_ultrasound = ");
+//  Serial.println(initial_ultrasound);
+//  int ultrasound_reading;
+//  int middle_ultrasound;
+//  int first_far = true;
+//  int middle_close = false;
+//  int second_far = false;
+//  int sweep_success = false;
+//  int sweep_start_timer = time_counter_a;
+////  Serial.print("start Timer counter = ");
+////  Serial.println(sweep_start_timer);
+//  int middle_counter = 0;
+//  int scnd_far_counter = 0;
+//  bool wall_detect = true;
+//  while (time_counter_a < sweep_start_timer + 30) {
+//    Serial.println(time_counter_a);
+//    timer_a.tick(); // tick the timer
+//    ultrasound_reading = ultrasonic1.read();
+//    if (ultrasound_reading > 10) {
+//      wall_detect = false;
+//    }
+//    if ((first_far == true) and (middle_close == false) and (second_far == false)) {
+////      Serial.println("checking for middle close...");
+//      if (ultrasound_reading <= (initial_ultrasound - 10)) {
+//        middle_counter += 1;
+//        scnd_far_counter = 0;
+//        if (middle_counter > 2) {
+//          Serial.println("MIDDLE_CLOSE = TRUE");
+//          middle_close = true;
+//          middle_ultrasound = ultrasound_reading;
+//          Serial.print("middle_ultrasound = ");
+//          Serial.println(middle_ultrasound);}        
+//      } else {
+//        middle_counter = 0;
+//        scnd_far_counter = 0;}
+//    } else if ((first_far == true) and (middle_close == true) and (second_far == false)) {
+////      Serial.print("middle_ultrasound + 10 = ");
+////      Serial.println((middle_ultrasound + 10));
+////      Serial.print("ultrasound_reading = ");
+////      Serial.println(ultrasound_reading);
+////      Serial.println("checking for second far...");
+//      if (ultrasound_reading >= (middle_ultrasound + 10)) {
+//        Serial.println("second far threshold met");
+//        scnd_far_counter += 1;
+//        if (scnd_far_counter > 2) {
+//          Serial.println("SECOND_FAR = TRUE");
+//          second_far = true;
+////          Serial.print("ultrasound_reading = ");
+////          Serial.println(ultrasound_reading);
+//          }
+//      } else {
+//        middle_counter = 0;
+//        scnd_far_counter = 0;}
+//    } else if ((first_far == true) and (middle_close == true) and (second_far == true)) {
+//      Serial.println("SWEEP_SUCCESS = TRUE");
+//      sweep_success = true;
+//      Serial.print("timer counter = ");
+//      Serial.println(time_counter_a);
+//    } else {
+//      Serial.println("reached unreachable else in sweep loop function");
+//    }
+//    delay(10);     
+//  }
+//  if (wall_detect == true) {
+//    halt();
+//    Serial.println("WALL DETECTED");
+//    delayprint(4000);
+//  }
+//  Serial.print("--------------------------------LOOP ENDED -> sweep success = ");
+//  Serial.println(sweep_success);
+//  halt();
+//  delayprint(4000);
+//  return sweep_success;
+//}
+//
+//int sweep_locating() {
+//  int initial_ultrasound = ultrasonic1.read();
+//  Serial.print("initial_ultrasound = ");
+//  Serial.println(initial_ultrasound);
+//  int ultrasound_reading;
+//  int middle_ultrasound;
+//  int first_far = true;
+//  int middle_close = false;
+//  int second_far = false;
+//  int sweep_success = false;
+//  int sweep_start_timer = time_counter_a;
 //  Serial.print("start Timer counter = ");
 //  Serial.println(sweep_start_timer);
-  int middle_counter = 0;
-  int scnd_far_counter = 0;
-  bool wall_detect = true;
-  while (time_counter_a < sweep_start_timer + 30) {
-    Serial.println(time_counter_a);
-    timer_a.tick(); // tick the timer
-    ultrasound_reading = ultrasonic1.read();
-    if (ultrasound_reading > 10) {
-      wall_detect = false;
-    }
-    if ((first_far == true) and (middle_close == false) and (second_far == false)) {
-//      Serial.println("checking for middle close...");
-      if (ultrasound_reading <= (initial_ultrasound - 10)) {
-        middle_counter += 1;
-        scnd_far_counter = 0;
-        if (middle_counter > 2) {
-          Serial.println("MIDDLE_CLOSE = TRUE");
-          middle_close = true;
-          middle_ultrasound = ultrasound_reading;
-          Serial.print("middle_ultrasound = ");
-          Serial.println(middle_ultrasound);}        
-      } else {
-        middle_counter = 0;
-        scnd_far_counter = 0;}
-    } else if ((first_far == true) and (middle_close == true) and (second_far == false)) {
-//      Serial.print("middle_ultrasound + 10 = ");
-//      Serial.println((middle_ultrasound + 10));
-//      Serial.print("ultrasound_reading = ");
-//      Serial.println(ultrasound_reading);
-//      Serial.println("checking for second far...");
-      if (ultrasound_reading >= (middle_ultrasound + 10)) {
-        Serial.println("second far threshold met");
-        scnd_far_counter += 1;
-        if (scnd_far_counter > 2) {
-          Serial.println("SECOND_FAR = TRUE");
-          second_far = true;
-//          Serial.print("ultrasound_reading = ");
-//          Serial.println(ultrasound_reading);
-          }
-      } else {
-        middle_counter = 0;
-        scnd_far_counter = 0;}
-    } else if ((first_far == true) and (middle_close == true) and (second_far == true)) {
-      Serial.println("SWEEP_SUCCESS = TRUE");
-      sweep_success = true;
-      Serial.print("timer counter = ");
-      Serial.println(time_counter_a);
-    } else {
-      Serial.println("reached unreachable else in sweep loop function");
-    }
-    delay(10);     
-  }
-  if (wall_detect == true) {
-    halt();
-    Serial.println("WALL DETECTED");
-    delayprint(4000);
-  }
-  Serial.print("--------------------------------LOOP ENDED -> sweep success = ");
-  Serial.println(sweep_success);
-  halt();
-  delayprint(4000);
-  return sweep_success;
-}
-
-int sweep_locating() {
-  int initial_ultrasound = ultrasonic1.read();
-  Serial.print("initial_ultrasound = ");
-  Serial.println(initial_ultrasound);
-  int ultrasound_reading;
-  int middle_ultrasound;
-  int first_far = true;
-  int middle_close = false;
-  int second_far = false;
-  int sweep_success = false;
-  int sweep_start_timer = time_counter_a;
-  Serial.print("start Timer counter = ");
-  Serial.println(sweep_start_timer);
-//  delayprint(1000);
-  int middle_counter = 0;
-  int scnd_far_counter = 0;
-  bool wall_detect = true;
-  while ((time_counter_a < sweep_start_timer + 30) and (second_far == false)) {
-    timer_a.tick(); // tick the timer
-    ultrasound_reading = ultrasonic1.read();
-    if (ultrasound_reading > 10) {
-      wall_detect = false;
-    }
-    if ((first_far == true) and (middle_close == false) and (second_far == false)) {
-//      Serial.println("checking for middle close...");
-      if (ultrasound_reading <= (initial_ultrasound - 10)) {
-        middle_counter += 1;
-        scnd_far_counter = 0;
-        if (middle_counter > 2) {
-          Serial.println("MIDDLE_CLOSE = TRUE");
-          middle_close = true;
-          middle_ultrasound = ultrasound_reading;
-          Serial.print("middle_ultrasound = ");
-          Serial.println(middle_ultrasound);
-          return middle_ultrasound;
-          break;
-          }        
-      } else {
-        middle_counter = 0;
-        scnd_far_counter = 0;}
-    } else if ((first_far == true) and (middle_close == true) and (second_far == false)) {
-//      Serial.print("middle_ultrasound + 10 = ");
-//      Serial.println((middle_ultrasound + 10));
-//      Serial.print("ultrasound_reading = ");
-//      Serial.println(ultrasound_reading);
-//      Serial.println("checking for second far...");
-      if (ultrasound_reading >= (middle_ultrasound + 10)) {
-        Serial.println("second far threshold met");
-        scnd_far_counter += 1;
-        if (scnd_far_counter > 2) {
-          Serial.println("SECOND_FAR = TRUE");
-          second_far = true;
-//          Serial.print("ultrasound_reading = ");
-//          Serial.println(ultrasound_reading);
-          }
-      } else {
-        middle_counter = 0;
-        scnd_far_counter = 0;}
-    } else if ((first_far == true) and (middle_close == true) and (second_far == true)) {
-      Serial.println("SWEEP_SUCCESS = TRUE");
-      sweep_success = true;
-      Serial.print("timer counter = ");
-      Serial.println(time_counter_a);
-    } else {
-      Serial.println("reached unreachable else in sweep loop function");
-    }
-    delay(10);     
-  }
-  if (wall_detect == true) {
-    halt();
-    Serial.println("WALL DETECTED");
-    delayprint(4000);
-  }
-  Serial.print("--------------------------------LOOP ENDED -> sweep success = ");
-  Serial.println("Person located");
-  halt();
-  return sweep_success;
-  delayprint(4000);
-}
+////  delayprint(1000);
+//  int middle_counter = 0;
+//  int scnd_far_counter = 0;
+//  bool wall_detect = true;
+//  while ((time_counter_a < sweep_start_timer + 30) and (second_far == false)) {
+//    timer_a.tick(); // tick the timer
+//    ultrasound_reading = ultrasonic1.read();
+//    if (ultrasound_reading > 10) {
+//      wall_detect = false;
+//    }
+//    if ((first_far == true) and (middle_close == false) and (second_far == false)) {
+////      Serial.println("checking for middle close...");
+//      if (ultrasound_reading <= (initial_ultrasound - 10)) {
+//        middle_counter += 1;
+//        scnd_far_counter = 0;
+//        if (middle_counter > 2) {
+//          Serial.println("MIDDLE_CLOSE = TRUE");
+//          middle_close = true;
+//          middle_ultrasound = ultrasound_reading;
+//          Serial.print("middle_ultrasound = ");
+//          Serial.println(middle_ultrasound);
+//          return middle_ultrasound;
+//          break;
+//          }        
+//      } else {
+//        middle_counter = 0;
+//        scnd_far_counter = 0;}
+//    } else if ((first_far == true) and (middle_close == true) and (second_far == false)) {
+////      Serial.print("middle_ultrasound + 10 = ");
+////      Serial.println((middle_ultrasound + 10));
+////      Serial.print("ultrasound_reading = ");
+////      Serial.println(ultrasound_reading);
+////      Serial.println("checking for second far...");
+//      if (ultrasound_reading >= (middle_ultrasound + 10)) {
+//        Serial.println("second far threshold met");
+//        scnd_far_counter += 1;
+//        if (scnd_far_counter > 2) {
+//          Serial.println("SECOND_FAR = TRUE");
+//          second_far = true;
+////          Serial.print("ultrasound_reading = ");
+////          Serial.println(ultrasound_reading);
+//          }
+//      } else {
+//        middle_counter = 0;
+//        scnd_far_counter = 0;}
+//    } else if ((first_far == true) and (middle_close == true) and (second_far == true)) {
+//      Serial.println("SWEEP_SUCCESS = TRUE");
+//      sweep_success = true;
+//      Serial.print("timer counter = ");
+//      Serial.println(time_counter_a);
+//    } else {
+//      Serial.println("reached unreachable else in sweep loop function");
+//    }
+//    delay(10);     
+//  }
+//  if (wall_detect == true) {
+//    halt();
+//    Serial.println("WALL DETECTED");
+//    delayprint(4000);
+//  }
+//  Serial.print("--------------------------------LOOP ENDED -> sweep success = ");
+//  Serial.println("Person located");
+//  halt();
+//  return sweep_success;
+//  delayprint(4000);
+//}
 
 ////////////// MISC. NAVIGATION BITS
 
@@ -646,8 +652,8 @@ void reverse_to_end() {
   delayprint(500);
   rightturn();
   delayprint(500);
-  backward(100);
-  delayprint(6000);
+  backward(250);
+  delayprint(8000);
   halt();
   delayprint(2000);
 }
@@ -721,10 +727,12 @@ void pick_up_victim(){
   delayprint(2000);
 //  GO TOWARDS PERSON AND STOP WITHIN 5CM
   delay(5000); // WAIT FOR VICTIM IDENTIFICATION CIRCUIT TO WORK
-  forward(50); // CHANGE SPEED TO LOWEST POSSIBLE THAT STILL MOVES
-  pullMotor -> run(BACKWARD);
-  pullMotor -> setSpeed(60);
-  delay(1000); // CHANGE SO STOPS WHEN CLOSED
+  forward(100); // CHANGE SPEED TO LOWEST POSSIBLE THAT STILL MOVES
+  delay(800);
+  halt();
+  pullMotor -> run(FORWARD);
+  pullMotor -> setSpeed(200);
+  delay(3000); // CHANGE SO STOPS WHEN CLOSED
   pullMotor -> setSpeed(0);
   people_collected += 1;
   }
@@ -875,7 +883,7 @@ void leftturn() {
   myMotor2->run(FORWARD);
   myMotor1->setSpeed(165);
   myMotor2->setSpeed(165);
-  delay(1500);
+  delay(1800);
   myMotor1->setSpeed(0);
   myMotor2->setSpeed(0);
 }
@@ -886,7 +894,7 @@ void rightturn() {
   myMotor2->run(BACKWARD);
   myMotor1->setSpeed(165);
   myMotor2->setSpeed(165);
-  delay(1500);
+  delay(1800);
   myMotor1->setSpeed(0);
   myMotor2->setSpeed(0);
 }

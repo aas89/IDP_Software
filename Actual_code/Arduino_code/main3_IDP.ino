@@ -27,6 +27,7 @@ int timer_count_s = 0;
 int time_counter_a;
 char side;
 int people_collected = 0;
+int turns = 0;
 
 void setup() {
   Serial.begin(9600);           // set up Serial library at 9600 bps
@@ -48,7 +49,11 @@ void setup() {
 void loop() {
   printHelloWorld();
   delayprint(6000);
- 
+
+
+//rightturn();
+//delay(10000);
+
 /////// TEST BOX:
 //  box(200);
 
@@ -62,60 +67,55 @@ void loop() {
 //////////////////////////// LINE FOLLOWING INTO CAVE:
 
 //// START SEQUENCE (includes automatic calibration):
-  start_sequence();
-  delayprint(1000);
-
-////// FIND LINE rotating:
-  rotate_find_line(leftThreshLineFollow, rightThreshLineFollow);
-  delayprint(1000);
-
-////// FOLLOW LINE:
-  follow_line_new (leftThreshLineFollow, rightThreshLineFollow, extraThreshLineFollow);
-
-//////////////////////////////// FINDING VICTIMS INSIDE CAVE:
-///// CHECK IN FRONT FOR VICTIMS
-//    bool person_found = sweep_towards_person(); // returns bool of whether person has been found
-//    if (person_found == true) {
-//      Serial.println("picking up victim (after delay) ....");
-//      delayprint(3000);
-//      pick_up_victim();
-//    }
-//    Serial.println("Reversing to end (after delay) ....");
-//    delayprint(3000);
-//    reverse_to_end();
-
-////// FIND SIDE VICTIMS
-//   while ((people_collected<4) && (millis()<240000)) { // <---------------------------------------------- check this millis() variable is actually getting updated / working
-//        locate_victim_side();
-//        pullMotor -> run(BACKWARD);
-//        pullMotor -> setSpeed(200); 
-//        delay(3000); // ADAPT SO OPENS ABOUT 90 DEGREES
-//        pullMotor -> setSpeed(0);
-//     bool person_found = sweep_towards_person(); // maybe don't need this??
-//     if (person_found) {
-//          pick_up_victim();  // needs to increment people_collected within it
-//        }
-//     back_to_centre();
-//     int ultrasonic2reading = ultrasonic2.read();
-//     if (ultrasonic2reading > 100) {
-//      rightturn();
-//      rightturn();
-//       }
+//  start_sequence();
+//  delayprint(1000);
+//////
+//////////// FIND LINE rotating:
+//  rotate_find_line(leftThreshLineFollow, rightThreshLineFollow);
+//  delayprint(1000);
+//////
+//////////// FOLLOW LINE:
+//  follow_line_new (leftThreshLineFollow, rightThreshLineFollow, extraThreshLineFollow);
+//
+////////////////////////////////// FINDING VICTIMS INSIDE CAVE:
+/////// CHECK IN FRONT FOR VICTIMS
+    bool person_found = sweep_towards_person(); // returns bool of whether person has been found
+    if (person_found == true) {
+      Serial.println("picking up victim (after delay) ....");
+      delayprint(3000);
+      pick_up_victim();
+    }
+    Serial.println("Reversing to end (after delay) ....");
+    delayprint(3000);
+    reverse_to_end();
+//
+//////// FIND SIDE VICTIMS
+////   while ((people_collected<4) && (millis()<240000)) { // <---------------------------------------------- check this millis() variable is actually getting updated / working
+        locate_victim_side();
+     person_found = sweep_towards_person(); // maybe don't need this??
+     if (person_found) {
+          pick_up_victim();  // needs to increment people_collected within it
+        }
+     back_to_centre();
 //  }
+if (turns == 1) {
+  rightturn();
+  rightturn();
+}
 
 //////////////////////////// DROP OFF + BACK TO START
-//  find_line_on_way_back(leftThreshLineFollow, rightThreshLineFollow, extraThreshLineFollow);
-//  delayprint(1000);
+  find_line_on_way_back(leftThreshLineFollow, rightThreshLineFollow, extraThreshLineFollow);
+  delayprint(1000);
   
-//  rotate_find_line(leftThreshLineFollow, firightThreshLineFollow);
-//  delayprint(1000);
-//  follow_line_new (leftThreshLineFollow, rightThreshLineFollow, extraThreshLineFollow);
+  rotate_find_line(leftThreshLineFollow, rightThreshLineFollow);
+  delayprint(1000);
+  follow_line_new (leftThreshLineFollow, rightThreshLineFollow, extraThreshLineFollow);
 //  
-//  drop_off_victims();
-//  reverse_to_start(leftThreshLineFollow, rightThreshLineFollow, extraThreshLineFollow);
+  drop_off_victims();
+  reverse_to_start(leftThreshLineFollow, rightThreshLineFollow, extraThreshLineFollow);
 //
-//  Serial.println(" --------------- END ----------------");
-//  delayprint(20000);
+  Serial.println(" --------------- END ----------------");
+  delayprint(20000);
 
 
 /////////////////////////////// END  
@@ -280,13 +280,30 @@ void locate_victim_side() {
   bool found = false;
   bool reversing = false;
   bool finished = false;
-  int thresh = 100; // Adjust based on reading for wall
+  int thresh = 90; // Adjust based on reading for wall
   int currentTime = 0;
   Serial.println(thresh);
   forward(80);
 
   while (!finished) {
   timer_s.tick(); // tick the timer
+  int ultrasonic1reading = ultrasonic1.read();
+  int ultrasonic2reading = ultrasonic2.read();
+  Serial.println(ultrasonic1reading);
+  Serial.println(ultrasonic2reading);
+  if ((ultrasonic2reading > 80) && turns==0) {
+    rightturn();
+    delay(500);
+    rightturn();
+    turns += 1;
+    forward(80);
+   } else if ((ultrasonic1reading < 30) && (turns==1)) {
+    rightturn();
+    delay(500);
+    rightturn();
+    turns += 1;
+    forward(80);
+   }
   newDistSens = analogRead(distSensPin); // Read sensor
   currentTime = timer_count_s;
   Serial.print("Sensor Reading is: "); 
@@ -365,6 +382,10 @@ void locate_victim_side() {
 
 ////////////// GO TOWARDS PERSON
 bool sweep_towards_person() {
+  pullMotor -> run(BACKWARD);
+  pullMotor -> setSpeed(200); 
+  delay(1000); // ADAPT SO OPENS ABOUT 90 DEGREES
+  pullMotor -> setSpeed(0);
   bool person_found = false;
   time_counter_a = 0;
   variableleftturnangle(400);
@@ -878,9 +899,9 @@ void leftturn() {
   Serial.println("leftturn");
   myMotor1->run(BACKWARD);
   myMotor2->run(FORWARD);
-  myMotor1->setSpeed(165);
-  myMotor2->setSpeed(165);
-  delay(1800);
+  myMotor1->setSpeed(160);
+  myMotor2->setSpeed(160);
+  delay(1450);
   myMotor1->setSpeed(0);
   myMotor2->setSpeed(0);
 }
@@ -889,9 +910,9 @@ void rightturn() {
   Serial.println("rightturn");
   myMotor1->run(FORWARD);
   myMotor2->run(BACKWARD);
-  myMotor1->setSpeed(165);
-  myMotor2->setSpeed(165);
-  delay(1200);
+  myMotor1->setSpeed(160);
+  myMotor2->setSpeed(160);
+  delay(1450);
   myMotor1->setSpeed(0);
   myMotor2->setSpeed(0);
 }

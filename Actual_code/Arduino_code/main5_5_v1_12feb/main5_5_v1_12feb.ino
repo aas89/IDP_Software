@@ -1,6 +1,8 @@
+// Import all necessary libraries
 #include <Wire.h>
 #include <Adafruit_MotorShield.h>
 #include <timer.h>
+#include <Ultrasonic.h>
 
 // Create the motor shield object with the default I2C address
 Adafruit_MotorShield AFMS = Adafruit_MotorShield();
@@ -13,24 +15,26 @@ Adafruit_DCMotor *myMotor2 = AFMS.getMotor(2);
 Adafruit_DCMotor *pullMotor = AFMS.getMotor(3);
 Adafruit_DCMotor *ejectMotor = AFMS.getMotor(4);
 
-#include <Ultrasonic.h>
 
+// Initialise ultrasound sensors at digital pins 9-12
 Ultrasonic ultrasonic1(9, 10); 
 Ultrasonic ultrasonic2(11, 12); 
 
+// Initialise timers
 auto timer_s = timer_create_default(); // create a timer with default settings
 auto timer_a = timer_create_default(); // create a timer with default settings
+// Initialise global variables
 int timer_count_s = 0;
 int time_counter_a;
-char side;
-int people_collected = 0;
-int turns = 0;
-const int ledPin =  13;// the number of the LED pin
-int ledState = LOW;             // ledState used to set the LED
-bool blink = false;
-unsigned long previousMillis = 0;        // will store last time LED was updated
-const long interval = 500;  
-bool looping = true;
+char side; // Unused
+int people_collected = 0; // How many people have been collected so far
+int turns = 0; // Keeps track of where robot is in search, and so which direction it's facing
+const int ledPin =  13; // the number of the LED pin for amber LED
+int ledState = LOW; // ledState used to set the LED for amber LED
+bool blink = false; // For blinking amber LED
+unsigned long previousMillis = 0; // will store last time LED was updated
+const long interval = 500; // Sets frequency of blinking of amber LED
+bool looping = true; // Determines whether to go back for another person
 
 
 void setup() {
@@ -39,6 +43,7 @@ void setup() {
 
   AFMS.begin();  // create with the default frequency 1.6KHz
   
+  // Sets up timers increments
   timer_s.every(100, inc_timer);
   timer_a.every(100, increment_time_counter);
     
@@ -55,12 +60,14 @@ void setup() {
 //  int rightThreshLineFollow = 1;
 //  int extraThreshLineFollow = 1;
 
+// Thresholds for line following
   int leftThreshLineFollow;
   int rightThreshLineFollow;
   int extraThreshLineFollow;
 
 // the loop routine runs over and over again forever:
 void loop() {
+  // Takes intial reading of time in milliseconds, will be used to check how long the robot has left
   unsigned long currentMillis = millis();
   printHelloWorld();
   delayprint(6000);
@@ -105,7 +112,6 @@ while (looping) {
       reverse_to_end180();
     
     } else {
-//       reverse to back
       reverse_to_end180();
       locate_victim_side();
       if( turns != 2) {
